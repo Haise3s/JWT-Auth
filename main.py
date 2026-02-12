@@ -1,28 +1,36 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from security import create_jwt_token, get_user_from_token, verify_password, get_password_hash
-from models import User, UserBase
+from models import UserCreate, UserResponse, UserData
 from fastapi.security import OAuth2PasswordRequestForm
-from db import get_user, USERS_DATA
-
+from db import get_user, USERS_DATA, bd_email_users
+from datetime import datetime
 app = FastAPI()
 
 
 @app.post("/register")
-async def register(user_in: User):
+async def register(user_in: UserCreate):
     if get_user(user_in.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пользователь с таким именем уже существует"
         )
-    
+    if user_in.user_data.email in bd_email_users:
+                raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пользователь с таким email уже существует"
+        )
     hashed_pass = get_password_hash(user_in.password)
-    
+    date_reg = datetime.now().strftime("%d/%m/%Y, %H:%M:%S")
     new_user = {
         "username": user_in.username,
-        "password": hashed_pass 
+        "password": hashed_pass,
+        "user_data":{'email':user_in.user_data.email,
+                     'age':user_in.user_data.age,
+                     'registration_date':date_reg}
+
     }
     USERS_DATA.append(new_user)
-    
+    bd_email_users.append(user_in.user_data.email)
     return {"message": "Успешная регистрация"}
 
 @app.post("/login")
@@ -38,14 +46,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             
     raise HTTPException(status_code=401, detail="Invalid credential")
 
-@app.get("/about_me", response_model=UserBase)
+@app.get("/about_me", response_model=UserData)
 async def about_me(current_user: str = Depends(get_user_from_token)):
     user_dict = get_user(current_user) 
     if user_dict:
-        return user_dict
+        return user_dict.get('user_data')
 
     raise HTTPException(status_code=404, detail="User not found")
-
 
 
 if __name__ == '__main__':
