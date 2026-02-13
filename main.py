@@ -136,7 +136,15 @@ async def admin_delete_user(target_username: str, admin: dict = Depends(check_ad
     return {"message": f"Администратор {admin['username']} удалил пользователя {target_username}"}
 
 
-
+@app.patch('/admin/ban_user')
+async def admin_ban_user(target_username:str, admin:dict = Depends(check_admin_role)):
+    user_to_ban = get_user(target_username)
+    if not user_to_ban:
+        raise HTTPException(status_code=404, detail="Целевой пользователь не найден")
+    if target_username == admin['username']:
+        raise HTTPException(status_code=400, detail="Вы не можете забанить самого себя")
+    user_to_ban['user_data']['is_active'] = Fals
+    return {"message": f"Администратор {admin['username']} забанил пользователя {target_username}"}
 
 if __name__ == '__main__':
     import uvicorn
