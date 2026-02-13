@@ -105,6 +105,38 @@ async def update_me(update_data: UserUpdate, current_username: str = Depends(get
         "message": "Данные успешно обновлены. Если вы меняли username, получите новый токен.", 
         "user": user['username']}
 
+
+@app.delete("/delete_me")
+async def delete_me(current_username: str = Depends(get_user_from_token)):
+    user = get_user(current_username)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    
+    user_email = user['user_data']['email']
+    if user_email in bd_email_users:
+        bd_email_users.remove(user_email)
+    
+    USERS_DATA.remove(user)
+    
+    return {"message": f"Пользователь {current_username} успешно удален из системы"}
+
+@app.delete("/admin/delete_user/{target_username}")
+async def admin_delete_user(target_username: str, admin: dict = Depends(check_admin_role)):
+    user_to_delete = get_user(target_username)
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="Целевой пользователь не найден")
+    
+    if target_username == admin['username']:
+        raise HTTPException(status_code=400, detail="Вы не можете удалить самого себя через этот метод")
+
+    bd_email_users.remove(user_to_delete['user_data']['email'])
+    USERS_DATA.remove(user_to_delete)
+    
+    return {"message": f"Администратор {admin['username']} удалил пользователя {target_username}"}
+
+
+
+
 if __name__ == '__main__':
     import uvicorn
     uvicorn.run('main:app', reload = False) 
