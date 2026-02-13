@@ -135,7 +135,7 @@ async def admin_delete_user(target_username: str, admin: dict = Depends(check_ad
     return {"message": f"Администратор {admin['username']} удалил пользователя {target_username}"}
 
 
-@app.patch('/admin/ban_user')
+@app.patch('/admin/ban_user/{target_username}')
 async def admin_ban_user(target_username:str, admin:dict = Depends(check_admin_role)):
     user_to_ban = get_user(target_username)
     if not user_to_ban:
@@ -147,7 +147,7 @@ async def admin_ban_user(target_username:str, admin:dict = Depends(check_admin_r
     user_to_ban['user_data']['is_active'] = False
     return {"message": f"Администратор {admin['username']} забанил пользователя {target_username}"}
 
-@app.patch('/admin/unban_user')
+@app.patch('/admin/unban_user/{target_username}')
 async def admin_unban_user(target_username:str, admin:dict = Depends(check_admin_role)):
     user_to_ban = get_user(target_username)
     if not user_to_ban:
