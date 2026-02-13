@@ -9,7 +9,8 @@ USERS_DATA = [
             "email": "admin@example.com",
             "age": 30,
             "registration_date": "13/02/2026, 11:00:00",
-            "role": "admin" 
+            "role": "admin",
+            "is_active": True
         }
     }
 ]

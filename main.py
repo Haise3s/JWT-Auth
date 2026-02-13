@@ -110,12 +110,11 @@ async def update_me(update_data: UserUpdate, current_user: dict = Depends(get_cu
 async def delete_me(current_user: dict = Depends(get_current_user)):
     if not current_user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-    
+    current_user['user_data']['is_active'] = False
     user_email = current_user['user_data']['email']
+
     if user_email in bd_email_users:
         bd_email_users.remove(user_email)
-    
-    USERS_DATA.remove(current_user)
     
     return {"message": f"Пользователь {current_user['username']} успешно удален из системы"}
 
@@ -131,11 +130,32 @@ async def admin_delete_user(target_username: str, admin: dict = Depends(check_ad
         raise HTTPException(status_code=400, detail="Вы не можете удалить самого себя через этот метод")
 
     bd_email_users.remove(user_to_delete['user_data']['email'])
-    USERS_DATA.remove(user_to_delete)
+    user_to_delete['user_data']['is_active'] = False
     
     return {"message": f"Администратор {admin['username']} удалил пользователя {target_username}"}
 
 
+@app.patch('/admin/ban_user')
+async def admin_ban_user(target_username:str, admin:dict = Depends(check_admin_role)):
+    user_to_ban = get_user(target_username)
+    if not user_to_ban:
+        raise HTTPException(status_code=404, detail="Целевой пользователь не найден")
+    if target_username == admin['username']:
+        raise HTTPException(status_code=400, detail="Вы не можете забанить самого себя")
+    if not user_to_ban['user_data']['is_active']:
+        raise HTTPException(status_code=400, detail="Пользователь уже забанен")
+    user_to_ban['user_data']['is_active'] = False
+    return {"message": f"Администратор {admin['username']} забанил пользователя {target_username}"}
+
+@app.patch('/admin/unban_user')
+async def admin_unban_user(target_username:str, admin:dict = Depends(check_admin_role)):
+    user_to_ban = get_user(target_username)
+    if not user_to_ban:
+        raise HTTPException(status_code=404, detail="Целевой пользователь не найден")
+    if user_to_ban['user_data']['is_active']:
+        raise HTTPException(status_code=400, detail="Пользователь имеет активный статус")
+    user_to_ban['user_data']['is_active'] = True
+    return {"message": f"Администратор {admin['username']} разбанил пользователя {target_username}"}
 
 
 if __name__ == '__main__':
