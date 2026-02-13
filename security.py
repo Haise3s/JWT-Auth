@@ -31,14 +31,6 @@ def create_jwt_token(data: Dict):
     to_encode.update({"exp": expire}) 
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM) 
 
-def get_user_from_token(token: str = Depends(oauth2_scheme)):
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Токен просрочен")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Неверный токен") 
 
 def get_password_hash(password: str) -> str:
     return password_helper.hash(password)
@@ -47,8 +39,27 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return password_helper.verify(plain_password, hashed_password)
 
 
-def check_admin_role(current_user: str = Depends(get_user_from_token)):
-    user = get_user(current_user)
-    if user['user_data']["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Только для администраторов!")
+
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username = payload.get("sub")
+    except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+        raise HTTPException(status_code=401, detail="Токен невалиден или просрочен")
+
+    user = get_user(username)
+    if not user:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    
+    if not user.get("user_data", {}).get("is_active", True):
+        raise HTTPException(status_code=403, detail="Ваш аккаунт заблокирован")
+        
     return user
+
+
+
+def check_admin_role(current_user: dict = Depends(get_current_user)):
+    if current_user['user_data']["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Только для администраторов!")
+    return current_user
+
