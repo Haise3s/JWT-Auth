@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from security import check_admin_role, create_jwt_token, get_user_from_token, verify_password, get_password_hash
-from models import UserCreate, UserResponse
+from models import UserCreate, UserResponse, UserUpdate
 from typing import List
 from fastapi.security import OAuth2PasswordRequestForm
 from db import get_user, USERS_DATA, bd_email_users
@@ -56,7 +56,8 @@ async def set_role(target_username:str ,admin_user: dict = Depends(check_admin_r
     if not user_to_change:
         raise HTTPException(status_code=404, detail="Пользователь для смены роли не найден")
     user_to_change['user_data']['role'] = 'admin'
-    return {"status": "success", "message": f"Роль пользователя {user_to_change['username']} изменена на {user_to_change['user_data']['role']}"}
+    return {"status": "success", 
+            "message": f"Роль пользователя {user_to_change['username']} изменена на {user_to_change['user_data']['role']}"}
 
 
 
@@ -75,6 +76,34 @@ async def all_users_info(admin: dict = Depends(check_admin_role)):
      return USERS_DATA
 
 
+@app.patch('/update_me')
+async def update_me(update_data: UserUpdate, current_username: str = Depends(get_user_from_token)):
+    user = get_user(current_username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if update_data.email and update_data.email != user['user_data']['email']:
+        if update_data.email in bd_email_users:
+            raise HTTPException(status_code=400, detail="Email уже занят")
+        
+        bd_email_users.remove(user['user_data']['email'])
+        user['user_data']['email'] = update_data.email
+        bd_email_users.append(update_data.email)
+
+    if update_data.password:
+        user['password'] = get_password_hash(update_data.password)
+
+    if update_data.age is not None:
+        user['user_data']['age'] = update_data.age
+
+    if update_data.username and update_data.username != user['username']:
+        if get_user(update_data.username):
+            raise HTTPException(status_code=400, detail="Имя уже занято")
+        user['username'] = update_data.username
+
+    return {
+        "message": "Данные успешно обновлены. Если вы меняли username, получите новый токен.", 
+        "user": user['username']}
 
 if __name__ == '__main__':
     import uvicorn
