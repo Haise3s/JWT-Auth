@@ -1,7 +1,7 @@
 import jwt
 import datetime
 from fastapi import Depends, HTTPException  
-from fastapi.security import OAuth2PasswordBearer, check_admin_role
+from fastapi.security import OAuth2PasswordBearer
 from typing import Dict
 from pwdlib import PasswordHash
 from db import get_user
@@ -49,6 +49,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def check_admin_role(current_user: str = Depends(get_user_from_token)):
     user = get_user(current_user)
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Только для админов!")
+    if user['user_data']["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Только для администраторов!")
     return user
