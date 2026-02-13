@@ -120,6 +120,19 @@ async def delete_me(current_username: str = Depends(get_user_from_token)):
     
     return {"message": f"Пользователь {current_username} успешно удален из системы"}
 
+@app.delete("/admin/delete_user/{target_username}")
+async def admin_delete_user(target_username: str, admin: dict = Depends(check_admin_role)):
+    user_to_delete = get_user(target_username)
+    if not user_to_delete:
+        raise HTTPException(status_code=404, detail="Целевой пользователь не найден")
+    
+    if target_username == admin['username']:
+        raise HTTPException(status_code=400, detail="Вы не можете удалить самого себя через этот метод")
+
+    bd_email_users.remove(user_to_delete['user_data']['email'])
+    USERS_DATA.remove(user_to_delete)
+    
+    return {"message": f"Администратор {admin['username']} удалил пользователя {target_username}"}
 
 
 
