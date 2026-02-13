@@ -16,3 +16,9 @@ class UserCreate(UserBase):
 
 class UserResponse(UserBase):
     user_data: UserData
+
+class UserUpdate(BaseModel):
+    username: str | None = None
+    password: str | None = None
+    email: EmailStr | None = None
+    age: int | None = Field(default=None, ge=0, le=110)
