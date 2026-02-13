@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from security import create_jwt_token, get_user_from_token, verify_password, get_password_hash
-from models import UserCreate, UserResponse, UserData
+from models import UserCreate, UserResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from db import get_user, USERS_DATA, bd_email_users
 from datetime import datetime
@@ -26,7 +26,8 @@ async def register(user_in: UserCreate):
         "password": hashed_pass,
         "user_data":{'email':user_in.user_data.email,
                      'age':user_in.user_data.age,
-                     'registration_date':date_reg}
+                     'registration_date':date_reg,
+                     'role':user_in.user_data.role }
 
     }
     USERS_DATA.append(new_user)
@@ -38,7 +39,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = get_user(form_data.username)
     if user:
         if verify_password(form_data.password, user.get('password')):
-            token = create_jwt_token({"sub": form_data.username})
+            token = create_jwt_token({"sub": form_data.username, "role": user.get("role")})
             return {
                 "access_token": token, 
                 "token_type": "bearer"
@@ -46,11 +47,21 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             
     raise HTTPException(status_code=401, detail="Invalid credential")
 
-@app.get("/about_me", response_model=UserData)
+
+
+@app.patch("/set_role")
+async def set_role(current_user: str = Depends(get_user_from_token)):
+    user_dict = get_user(current_user)
+    if user_dict:
+        if 
+        
+     raise HTTPException(status_code=404, detail="User not found")
+@app.get("/about_me", response_model=UserResponse) 
 async def about_me(current_user: str = Depends(get_user_from_token)):
     user_dict = get_user(current_user) 
     if user_dict:
-        return user_dict.get('user_data')
+        return {'username':user_dict.get('username'),
+                'user_data':user_dict.get('user_data')}
 
     raise HTTPException(status_code=404, detail="User not found")
 
